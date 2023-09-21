@@ -1,6 +1,6 @@
 {
-	"name": "express-ts-basic",
-	"version": "1.0.3",
+	"name": "@putuartha/express-ts-setup",
+	"version": "1.0.0",
 	"description": "",
 	"main": "index.js",
 	"scripts": {

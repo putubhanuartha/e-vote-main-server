@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id       String @id @default(uuid())
+  username String @unique
+  password String @db.VarChar(500)
+}
+
+model Warga {
+  id                        String                     @id @default(uuid())
+  nama                      String                     @unique
+  password                  String?                    @db.VarChar(500)
+  nik                       String                     @unique @db.Char(16)
+  Candidate                 Candidate?
+  registered                Boolean                    @default(false)
+  email                     String                     @unique
+  candidateVotedTransaction CandidateVotedTransaction?
+  token                     String                     @unique @db.Char(5)
+}
+
+model Candidate {
+  id               String            @id @default(uuid())
+  wargaId          String            @unique
+  warga            Warga             @relation(fields: [wargaId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  visi             String?
+  misi             String?           @db.LongText
+  photoUrl         String            @db.Text
+  VotingCandidates VotingCandidates?
+}
+
+model CandidateVotedTransaction {
+  warga              Warga            @relation(fields: [wargaId], references: [id])
+  wargaId            String           @unique
+  assignedAt         DateTime         @default(now())
+  votingCandidatesId String
+  votingCandidates   VotingCandidates @relation(fields: [votingCandidatesId], references: [id])
+
+  @@id([wargaId, votingCandidatesId])
+}
+
+model VotingCandidates {
+  id                        String                      @id @default(uuid())
+  votingId                  String
+  voting                    Voting                      @relation(fields: [votingId], references: [id])
+  candidateId               String                      @unique
+  candidate                 Candidate                   @relation(fields: [candidateId], references: [id])
+  candidateVotedTransaction CandidateVotedTransaction[]
+}
+
+model Voting {
+  id                    String             @id @default(uuid())
+  dateStart             DateTime
+  timeStart             DateTime
+  timeEnd               DateTime
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  jenisPilihan          JenisPilihan       @default(rt)
+  kecamatan             String
+  kelurahan             String
+  rw                    Int
+  rt                    Int?
+  VotingCandidates      VotingCandidates[]
+  candidateVotedWargaId String?
+}
+
+enum JenisPilihan {
+  rt
+  rw
+}

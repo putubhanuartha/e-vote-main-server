@@ -53,7 +53,15 @@ class AdminController extends UserController implements AdminService, WargaServi
     }
     deleteWarga(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
-
+            const { id } = req.query
+            try {
+                const deleted = await this.modelWarga.delete({ where: { id: id as string } })
+                res.status(200).json(deleted)
+            }
+            catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
         }
     }
     editWarga(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
@@ -67,9 +75,9 @@ class AdminController extends UserController implements AdminService, WargaServi
             const { keyword } = req.query
             try {
                 let data;
-                if(keyword) {
+                if (keyword) {
                     data = await this.modelWarga.findMany({ where: { OR: [{ nama: { contains: keyword as string | undefined } }, { nik: { contains: keyword as string | undefined } }] } })
-                }else{
+                } else {
                     data = await this.modelWarga.findMany({ select: { email: true, id: true, nama: true, nik: true, registered: true } })
                 }
                 res.status(200).json(data)
@@ -80,7 +88,7 @@ class AdminController extends UserController implements AdminService, WargaServi
             }
         }
     }
- 
+
 
 }
 

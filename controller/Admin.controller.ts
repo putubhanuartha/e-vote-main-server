@@ -56,7 +56,11 @@ class AdminController extends UserController implements AdminService, WargaServi
             const { id } = req.query
             try {
                 const deleted = await this.modelWarga.delete({ where: { id: id as string } })
-                res.status(200).json(deleted)
+                if (deleted) {
+                    res.status(200).json(deleted)
+                    return
+                }
+                res.status(404).json({ message: "data not found" })
             }
             catch (err) {
                 console.error(err)
@@ -66,7 +70,24 @@ class AdminController extends UserController implements AdminService, WargaServi
     }
     editWarga(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
-
+            const { id } = req.query
+            const { nama, nik, email } = req.body
+            try {
+                const updatedUser = await this.prismaClient.warga.update({
+                    where: { id: id as string }, data: {
+                        nama, nik, email
+                    }
+                })
+                if (updatedUser) {
+                    res.status(200).json(updatedUser)
+                    return
+                }
+                res.status(404).json({ message: "data not found" })
+            }
+            catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
         }
     }
 

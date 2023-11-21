@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, Voting } from "@prisma/client";
 import UserController from "./User.controller";
 import { DefaultArgs } from "@prisma/client/runtime/library";
 import AdminService from "../service/Admin.service";
@@ -6,17 +6,23 @@ import { Request, Response } from "express";
 import { ParamsDictionary } from "express-serve-static-core";
 import { ParsedQs } from "qs";
 import WargaService from "../service/Warga.service";
-import tokenGenerator from "../helper/tokenGenerator";
-import emailSender from "../helper/emailSender";
+import tokenGenerator from "../helper/tokenGenerator.helper";
+import emailSender from "../helper/emailSender.helper";
+import VotingService from "../service/Voting.service";
+import { addTimeAndConvertToEpoch } from "../helper/timeConverter";
 
 
-class AdminController extends UserController implements AdminService, WargaService {
+class AdminController extends UserController implements AdminService, WargaService, VotingService {
     modelAdmin: Prisma.AdminDelegate<DefaultArgs>
     modelWarga: Prisma.WargaDelegate<DefaultArgs>
+    modelVote: Prisma.VotingDelegate<DefaultArgs>
+    modelVotingCandidates: Prisma.VotingCandidatesDelegate<DefaultArgs>
     constructor() {
         super()
         this.modelAdmin = this.prismaClient.admin
         this.modelWarga = this.prismaClient.warga
+        this.modelVote = this.prismaClient.voting
+        this.modelVotingCandidates = this.prismaClient.votingCandidates
     }
 
     login(): void {
@@ -110,6 +116,53 @@ class AdminController extends UserController implements AdminService, WargaServi
         }
     }
 
+    addVoting(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { date, timeStart, timeEnd, jenisPilihan, kelurahan, kecamatan, rt, rw } = req.body
+            try {
+                const responseVoting = await this.modelVote.create({ data: { kecamatan: kecamatan, kelurahan: kelurahan, rw: Number(rw), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd), epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), jenisPilihan: jenisPilihan, rt: Number(rt) } })
+                const responseVotingCandidates = await this.modelVotingCandidates.create({ data: { votingId: responseVoting.id } })
+                res.status(200).json({ ...responseVoting, ...responseVotingCandidates })
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+
+        }
+    }
+
+    editVoting(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { id, votingCandidateId } = req.query
+            const { date, timeStart, timeEnd, jenisPilihan, kelurahan, kecamatan, rt, rw } = req.body
+            
+            try {
+                const updatedResponse = await this.modelVote.update({ where: { id: id as string }, data: { kecamatan: kecamatan, kelurahan: kelurahan, rw: Number(rw), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd), epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), jenisPilihan: jenisPilihan, rt: Number(rt) } })
+                const responseVotingCandidates = await this.modelVotingCandidates.findFirst({ where: { id: votingCandidateId as string } })
+                res.status(200).json({ ...updatedResponse, ...responseVotingCandidates })
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+        }
+    }
+
+    getAvailableVoting(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            try {
+                const response = await this.modelVotingCandidates.findFirst({ where: { status: { not: "done" } }, include: { voting: true } })
+                if (!response) {
+                    res.sendStatus(500)
+                    return
+                }
+                res.status(200).json(response)
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+
+        }
+    }
 
 }
 

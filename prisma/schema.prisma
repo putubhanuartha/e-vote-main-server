@@ -50,30 +50,38 @@ model CandidateVotedTransaction {
 
 model VotingCandidates {
   id                        String                      @id @default(uuid())
-  votingId                  String
+  votingId                  String                      @unique
   voting                    Voting                      @relation(fields: [votingId], references: [id])
-  candidateId               String                      @unique
-  candidate                 Candidate                   @relation(fields: [candidateId], references: [id])
+  candidateId               String?                     @unique
+  candidate                 Candidate?                  @relation(fields: [candidateId], references: [id])
   candidateVotedTransaction CandidateVotedTransaction[]
+  status                    StatusVoting                @default(not_ready)
+
+  @@unique([votingId, candidateId])
 }
 
 model Voting {
-  id                    String             @id @default(uuid())
-  dateStart             DateTime
-  timeStart             DateTime
-  timeEnd               DateTime
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
-  jenisPilihan          JenisPilihan       @default(rt)
-  kecamatan             String
-  kelurahan             String
-  rw                    Int
-  rt                    Int?
-  VotingCandidates      VotingCandidates[]
-  candidateVotedWargaId String?
+  id               String             @id @default(uuid())
+  epochtimeStart   Int                @db.Int
+  epochtimeEnd     Int                @db.Int
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  jenisPilihan     JenisPilihan       @default(rt)
+  kecamatan        String
+  kelurahan        String
+  rw               Int
+  rt               Int?               @db.UnsignedInt
+  VotingCandidates VotingCandidates[]
 }
 
 enum JenisPilihan {
   rt
   rw
+}
+
+enum StatusVoting {
+  not_ready
+  ready
+  active
+  done
 }

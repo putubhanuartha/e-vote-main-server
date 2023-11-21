@@ -121,8 +121,7 @@ class AdminController extends UserController implements AdminService, WargaServi
             const { date, timeStart, timeEnd, jenisPilihan, kelurahan, kecamatan, rt, rw } = req.body
             try {
                 const responseVoting = await this.modelVote.create({ data: { kecamatan: kecamatan, kelurahan: kelurahan, rw: Number(rw), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd), epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), jenisPilihan: jenisPilihan, rt: Number(rt) } })
-                const responseVotingCandidates = await this.modelVotingCandidates.create({ data: { votingId: responseVoting.id } })
-                res.status(200).json({ ...responseVoting, ...responseVotingCandidates })
+                res.status(200).json(responseVoting)
             } catch (err) {
                 console.error(err)
                 res.sendStatus(500)
@@ -133,13 +132,11 @@ class AdminController extends UserController implements AdminService, WargaServi
 
     editVoting(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
-            const { id, votingCandidateId } = req.query
+            const { id } = req.query
             const { date, timeStart, timeEnd, jenisPilihan, kelurahan, kecamatan, rt, rw } = req.body
-            
             try {
                 const updatedResponse = await this.modelVote.update({ where: { id: id as string }, data: { kecamatan: kecamatan, kelurahan: kelurahan, rw: Number(rw), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd), epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), jenisPilihan: jenisPilihan, rt: Number(rt) } })
-                const responseVotingCandidates = await this.modelVotingCandidates.findFirst({ where: { id: votingCandidateId as string } })
-                res.status(200).json({ ...updatedResponse, ...responseVotingCandidates })
+                res.status(200).json(updatedResponse)
             } catch (err) {
                 console.error(err)
                 res.sendStatus(500)
@@ -150,7 +147,7 @@ class AdminController extends UserController implements AdminService, WargaServi
     getAvailableVoting(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
             try {
-                const response = await this.modelVotingCandidates.findFirst({ where: { status: { not: "done" } }, include: { voting: true } })
+                const response = await this.modelVote.findFirst({ where: { status: { not: "done" } } })
                 if (!response) {
                     res.sendStatus(500)
                     return

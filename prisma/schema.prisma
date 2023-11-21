@@ -55,7 +55,6 @@ model VotingCandidates {
   candidateId               String?                     @unique
   candidate                 Candidate?                  @relation(fields: [candidateId], references: [id])
   candidateVotedTransaction CandidateVotedTransaction[]
-  status                    StatusVoting                @default(not_ready)
 
   @@unique([votingId, candidateId])
 }
@@ -72,6 +71,7 @@ model Voting {
   rw               Int
   rt               Int?               @db.UnsignedInt
   VotingCandidates VotingCandidates[]
+  status           StatusVoting       @default(not_ready)
 }
 
 enum JenisPilihan {

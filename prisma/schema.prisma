@@ -52,8 +52,8 @@ model VotingCandidates {
   id                        String                      @id @default(uuid())
   votingId                  String                      @unique
   voting                    Voting                      @relation(fields: [votingId], references: [id])
-  candidateId               String?                     @unique
-  candidate                 Candidate?                  @relation(fields: [candidateId], references: [id])
+  candidateId               String                      @unique
+  candidate                 Candidate                   @relation(fields: [candidateId], references: [id])
   candidateVotedTransaction CandidateVotedTransaction[]
 
   @@unique([votingId, candidateId])

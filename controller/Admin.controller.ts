@@ -1,6 +1,4 @@
-import { Prisma, Voting } from "@prisma/client";
 import UserController from "./User.controller";
-import { DefaultArgs } from "@prisma/client/runtime/library";
 import AdminService from "../service/Admin.service";
 import { Request, Response } from "express";
 import { ParamsDictionary } from "express-serve-static-core";
@@ -12,18 +10,16 @@ import VotingService from "../service/Voting.service";
 import { addTimeAndConvertToEpoch } from "../helper/timeConverter";
 
 
-class AdminController extends UserController implements AdminService, WargaService, VotingService {
-    modelAdmin: Prisma.AdminDelegate<DefaultArgs>
-    modelWarga: Prisma.WargaDelegate<DefaultArgs>
-    modelVote: Prisma.VotingDelegate<DefaultArgs>
-    modelVotingCandidates: Prisma.VotingCandidatesDelegate<DefaultArgs>
-    constructor() {
-        super()
-        this.modelAdmin = this.prismaClient.admin
-        this.modelWarga = this.prismaClient.warga
-        this.modelVote = this.prismaClient.voting
-        this.modelVotingCandidates = this.prismaClient.votingCandidates
-    }
+// sequelize model
+import WargaModel from "../model/Warga.model";
+import { Op } from "sequelize";
+import VotingModel from "../model/Voting.model";
+import CandidateModel from "../model/Candidate.model";
+import VotingCandidatesModel from "../model/VotingCandidates.model";
+import CandidateService from "../service/Candidate.service";
+
+
+class AdminController extends UserController implements AdminService, WargaService, VotingService, CandidateService {
 
     login(): void {
 
@@ -32,22 +28,19 @@ class AdminController extends UserController implements AdminService, WargaServi
     logout(): void {
 
     }
+
     addWarga(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
             const { nama, nik, email } = req.body
             try {
                 let token: string = tokenGenerator()
-                let activeToken = await this.modelWarga.findUnique({ where: { nik, registered: Boolean(0), token } })
+                let activeToken = await WargaModel.findOne({ where: { nik, registered: Boolean(0), token } })
                 while (activeToken) {
                     token = tokenGenerator()
-                    activeToken = await this.modelWarga.findUnique({ where: { nik, registered: Boolean(0), token } })
+                    activeToken = await WargaModel.findOne({ where: { nik, registered: Boolean(0), token } })
                 }
 
-                const warga = await this.modelWarga.create({
-                    data: {
-                        email, nik, nama, token
-                    }
-                })
+                const warga = await WargaModel.create({ nama, email, nik, token })
                 await emailSender(`<h1>Halo, ${nama}</h1><br><p>Berikut adalah token anda untuk registrasi pada aplikasi E-Vote</p><br><p>Token : ${token}<p/>`, [email], 'Registration Token')
                 res.status(200).json(warga)
 
@@ -61,8 +54,8 @@ class AdminController extends UserController implements AdminService, WargaServi
         return async (req, res) => {
             const { id } = req.query
             try {
-                const deleted = await this.modelWarga.delete({ where: { id: id as string } })
-                if (deleted) {
+                const deleted = await WargaModel.destroy({ where: { id: id } })
+                if (deleted > 0) {
                     res.status(200).json(deleted)
                     return
                 }
@@ -79,12 +72,8 @@ class AdminController extends UserController implements AdminService, WargaServi
             const { id } = req.query
             const { nama, nik, email } = req.body
             try {
-                const updatedUser = await this.prismaClient.warga.update({
-                    where: { id: id as string }, data: {
-                        nama, nik, email
-                    }
-                })
-                if (updatedUser) {
+                const [updatedUser] = await WargaModel.update({ nama, nik, email }, { where: { id } })
+                if (updatedUser > 0) {
                     res.status(200).json(updatedUser)
                     return
                 }
@@ -101,12 +90,7 @@ class AdminController extends UserController implements AdminService, WargaServi
         return async (req, res) => {
             const { keyword } = req.query
             try {
-                let data;
-                if (keyword) {
-                    data = await this.modelWarga.findMany({ where: { OR: [{ nama: { contains: keyword as string | undefined } }, { nik: { contains: keyword as string | undefined } }] } })
-                } else {
-                    data = await this.modelWarga.findMany({ select: { email: true, id: true, nama: true, nik: true, registered: true } })
-                }
+                const data = await WargaModel.findAll({ where: { ...(keyword && { [Op.or]: [{ nama: { [Op.like]: `%${keyword}%` } }, { nik: { [Op.like]: `%${keyword}%` } }] }) } })
                 res.status(200).json(data)
             }
             catch (err) {
@@ -120,7 +104,7 @@ class AdminController extends UserController implements AdminService, WargaServi
         return async (req, res) => {
             const { date, timeStart, timeEnd, jenisPilihan, kelurahan, kecamatan, rt, rw } = req.body
             try {
-                const responseVoting = await this.modelVote.create({ data: { kecamatan: kecamatan, kelurahan: kelurahan, rw: Number(rw), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd), epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), jenisPilihan: jenisPilihan, rt: Number(rt) } })
+                const responseVoting = await VotingModel.create({ kecamatan, kelurahan, rw: Number(rw), rt: Number(rt), jenisPilihan, epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd) })
                 res.status(200).json(responseVoting)
             } catch (err) {
                 console.error(err)
@@ -134,8 +118,13 @@ class AdminController extends UserController implements AdminService, WargaServi
         return async (req, res) => {
             const { id } = req.query
             const { date, timeStart, timeEnd, jenisPilihan, kelurahan, kecamatan, rt, rw } = req.body
+            console.log(rt)
             try {
-                const updatedResponse = await this.modelVote.update({ where: { id: id as string }, data: { kecamatan: kecamatan, kelurahan: kelurahan, rw: Number(rw), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd), epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), jenisPilihan: jenisPilihan, rt: Number(rt) } })
+                const [updatedResponse] = await VotingModel.update({ kecamatan: kecamatan, kelurahan: kelurahan, rw: Number(rw), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd), epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), jenisPilihan: jenisPilihan, rt: Number(rt) }, { where: { id } })
+                if (updatedResponse === 0) {
+                    res.sendStatus(500)
+                    return
+                }
                 res.status(200).json(updatedResponse)
             } catch (err) {
                 console.error(err)
@@ -147,7 +136,7 @@ class AdminController extends UserController implements AdminService, WargaServi
     getAvailableVoting(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
             try {
-                const response = await this.modelVote.findFirst({ where: { status: { not: "done" } } })
+                const response = await VotingModel.findOne({ where: { status: { [Op.ne]: "done" } } })
                 if (!response) {
                     res.sendStatus(500)
                     return
@@ -158,6 +147,57 @@ class AdminController extends UserController implements AdminService, WargaServi
                 res.sendStatus(500)
             }
 
+        }
+    }
+
+    getActiveCandidate(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { votingId } = req.query
+            try {
+                const activeCandidate = await VotingCandidatesModel.findAll({ where: { fk_votingId: votingId }, include: [{ model: CandidateModel, include: [{ model: WargaModel, attributes: ["nama", "nik", "email"] }] }] })
+                res.status(200).json(activeCandidate)
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+
+        }
+    }
+    addCandidate(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { visi, misi, imageUrl, kandidat, votingId } = req.body
+            try {
+
+
+                const candidate = await CandidateModel.create({ visi, misi, photoUrl: imageUrl, WargaId: kandidat })
+
+                const response = await VotingCandidatesModel.create({ fk_votingId: votingId, fk_candidateId: candidate.dataValues.id })
+                res.status(200).json({ ...candidate.dataValues, ...response.dataValues })
+
+            }
+            catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+        }
+    }
+
+    deleteCandidate(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { id } = req.query
+            console.log(id)
+            try {
+                const deleted = await CandidateModel.destroy({ where: { id } })
+                if (deleted > 0) {
+                    res.sendStatus(200)
+                    return
+                }
+                res.sendStatus(404)
+            }
+            catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
         }
     }
 

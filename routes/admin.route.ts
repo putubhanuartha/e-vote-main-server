@@ -11,4 +11,8 @@ Route.post("/add-voting", AdminController.addVoting())
 Route.get("/available-voting", AdminController.getAvailableVoting())
 Route.put("/update-voting", AdminController.editVoting())
 
+Route.post('/add-candidate', AdminController.addCandidate())
+Route.get("/get-active-candidates", AdminController.getActiveCandidate())
+Route.delete('/delete-candidate', AdminController.deleteCandidate())
+
 export { Route as AdminRoute }

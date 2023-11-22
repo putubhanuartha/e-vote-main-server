@@ -15,12 +15,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const cors_1 = __importDefault(require("cors"));
-const client_1 = require("@prisma/client");
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 const index_route_1 = require("./routes/index.route");
+const database_1 = __importDefault(require("./config/database"));
 dotenv_1.default.config();
 const sg_api_key = process.env.SENDGRID_API_KEY;
-const prisma = new client_1.PrismaClient();
 const app = (0, express_1.default)();
 const port = process.env.SERVER_PORT;
 function main() {
@@ -30,21 +29,18 @@ function main() {
         app.use(express_1.default.json());
         app.use(express_1.default.urlencoded({ extended: false }));
         app.use(index_route_1.IndexRoute);
-        app.get('/', (req, res) => __awaiter(this, void 0, void 0, function* () {
-            const data = yield prisma.candidate.findMany();
-            res.status(200).json(data);
-        }));
-        app.listen(port, () => {
-            console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
-        });
+        try {
+            yield database_1.default.authenticate();
+            console.log("database is authenticated ...");
+            yield database_1.default.sync();
+            console.log("database is sync ...");
+            app.listen(port, () => {
+                console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+            });
+        }
+        catch (err) {
+            console.error(err);
+        }
     });
 }
-main()
-    .then(() => __awaiter(void 0, void 0, void 0, function* () {
-    yield prisma.$disconnect();
-}))
-    .catch((e) => __awaiter(void 0, void 0, void 0, function* () {
-    console.error(e);
-    yield prisma.$disconnect();
-    process.exit(1);
-}));
+main();

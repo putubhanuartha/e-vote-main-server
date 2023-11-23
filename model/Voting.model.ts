@@ -1,6 +1,7 @@
 import { DataTypes, UUIDV4 } from "sequelize";
 import sequelize from "../config/database";
-import { JenisPilihan, StatusVoting } from '../enums';
+import { StatusVoting } from '../enums';
+import AdministrativeModel from "./Administrative.model";
 const VotingModel = sequelize.define('Voting', {
     id: {
         type: DataTypes.UUID,
@@ -15,33 +16,14 @@ const VotingModel = sequelize.define('Voting', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    kecamatan: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    kelurahan: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    rw: {
-        type: DataTypes.INTEGER,
-        allowNull: false
-    },
-    rt: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        defaultValue: null
-    },
-    jenisPilihan: {
-        type: DataTypes.ENUM(...(Object.values(JenisPilihan).map((el) => el))),
-        allowNull: false,
-        defaultValue: JenisPilihan.rt
-    },
     status: {
         type: DataTypes.ENUM(...(Object.values(StatusVoting).map((el) => el))),
         allowNull: false,
         defaultValue: StatusVoting.not_ready
     }
 }, { freezeTableName: true })
+
+AdministrativeModel.hasMany(VotingModel, { onDelete: 'RESTRICT', foreignKey: { allowNull: false } })
+VotingModel.belongsTo(AdministrativeModel, { onDelete: 'RESTRICT', foreignKey: { allowNull: false } })
 
 export default VotingModel

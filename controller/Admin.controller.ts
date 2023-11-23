@@ -18,9 +18,11 @@ import CandidateModel from "../model/Candidate.model";
 import VotingCandidatesModel from "../model/VotingCandidates.model";
 import CandidateService from "../service/Candidate.service";
 import { StatusVoting } from "../enums";
+import AdministrativeModel from "../model/Administrative.model";
+import AdministrativeService from "../service/Administrative.service";
 
 
-class AdminController extends UserController implements AdminService, WargaService, VotingService, CandidateService {
+class AdminController extends UserController implements AdministrativeService, AdminService, WargaService, VotingService, CandidateService {
 
     login(): void {
 
@@ -30,6 +32,19 @@ class AdminController extends UserController implements AdminService, WargaServi
 
     }
 
+    // administrative
+    getAdministrativeData(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const administrativeData = await AdministrativeModel.findOne()
+            if (!administrativeData) {
+                res.sendStatus(404)
+                return
+            }
+            res.status(200).json(administrativeData)
+        }
+    }
+
+    // warga
     addWarga(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
             const { nama, nik, email } = req.body
@@ -101,11 +116,12 @@ class AdminController extends UserController implements AdminService, WargaServi
         }
     }
 
+    // voting
     addVoting(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
-            const { date, timeStart, timeEnd, jenisPilihan, kelurahan, kecamatan, rt, rw } = req.body
+            const { date, timeStart, timeEnd, administrativeId } = req.body
             try {
-                const responseVoting = await VotingModel.create({ kecamatan, kelurahan, rw: Number(rw), rt: Number(rt), jenisPilihan, epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd) })
+                const responseVoting = await VotingModel.create({ AdministrativeId: administrativeId, epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd) })
                 res.status(200).json(responseVoting)
             } catch (err) {
                 console.error(err)
@@ -137,7 +153,7 @@ class AdminController extends UserController implements AdminService, WargaServi
     getAvailableVoting(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
             try {
-                const response = await VotingModel.findOne({ where: { status: { [Op.ne]: "done" } } })
+                const response = await VotingModel.findOne({ where: { status: { [Op.ne]: "done" } }, include: [{ model: AdministrativeModel }] })
                 if (!response) {
                     res.sendStatus(404)
                     return
@@ -151,6 +167,7 @@ class AdminController extends UserController implements AdminService, WargaServi
         }
     }
 
+    // candidate
     getActiveCandidate(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
             const { votingId } = req.query
@@ -164,6 +181,7 @@ class AdminController extends UserController implements AdminService, WargaServi
 
         }
     }
+
     addCandidate(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
             const { visi, misi, imageUrl, kandidat, votingId } = req.body

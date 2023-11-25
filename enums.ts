@@ -9,3 +9,9 @@ export enum StatusVoting {
     active = "active",
     done = "done"
 }
+
+export enum StatusFormFilling {
+    ready = "ready",
+    active = "active",
+    done = "done"
+}

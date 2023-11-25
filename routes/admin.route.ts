@@ -18,4 +18,12 @@ Route.post('/add-candidate', AdminController.addCandidate())
 Route.get("/get-active-candidates", AdminController.getActiveCandidate())
 Route.delete('/delete-candidate', AdminController.deleteCandidate())
 
+
+Route.post('/add-form', AdminController.addNewForm())
+Route.get('/get-forms', AdminController.getForms())
+Route.put('/edit-status-form', AdminController.editStatusForm())
+Route.delete('/delete-form', AdminController.deleteForm())
+Route.put('/edit-form', AdminController.editForm())
+Route.get('/get-form', AdminController.getForm())
+
 export { Route as AdminRoute }

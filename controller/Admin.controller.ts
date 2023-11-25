@@ -20,9 +20,11 @@ import CandidateService from "../service/Candidate.service";
 import { StatusVoting } from "../enums";
 import AdministrativeModel from "../model/Administrative.model";
 import AdministrativeService from "../service/Administrative.service";
+import FormService from "../service/Form.service";
+import FormContentModel from "../model/FormContentModel";
 
 
-class AdminController extends UserController implements AdministrativeService, AdminService, WargaService, VotingService, CandidateService {
+class AdminController extends UserController implements FormService, AdministrativeService, AdminService, WargaService, VotingService, CandidateService {
 
     login(): void {
 
@@ -208,6 +210,97 @@ class AdminController extends UserController implements AdministrativeService, A
                 if (rows === 0) await VotingModel.update({ status: StatusVoting.not_ready }, { where: { id: votingId } })
                 if (deleted > 0) {
                     res.sendStatus(200)
+                    return
+                }
+                res.sendStatus(404)
+            }
+            catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+        }
+    }
+
+
+    // form
+    addNewForm(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { titleForm, contentForm } = req.body
+            try {
+                const created = await FormContentModel.create({ titleForm, contentForm })
+                res.status(200).json(created)
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+        }
+    }
+
+    getForms(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            try {
+                const responData = await FormContentModel.findAll()
+                res.status(200).json(responData)
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+        }
+    }
+    editStatusForm(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { id } = req.query
+            const { status } = req.body
+            console.log(id)
+            console.log(status)
+            try {
+                const [updated] = await FormContentModel.update({ status }, { where: { id } })
+                if (updated > 0) {
+                    res.sendStatus(200)
+                    return
+                }
+                res.sendStatus(404)
+            } catch (err) {
+                console.error(err);
+                res.sendStatus(500)
+            }
+        }
+    }
+    deleteForm(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { id } = req.query
+            try {
+                const deletedRows = await FormContentModel.destroy({ where: { id } })
+                if (deletedRows > 0) {
+                    res.sendStatus(200)
+                    return
+                }
+                res.sendStatus(404)
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+        }
+    }
+    editForm(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { id } = req.query
+            const { titleForm, contentForm } = req.body
+            const [updated] = await FormContentModel.update({ titleForm, contentForm }, { where: { id } })
+            if (updated <= 0) {
+                res.sendStatus(404)
+                return
+            }
+            res.sendStatus(200)
+        }
+    }
+    getForm(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { id } = req.query
+            try {
+                const response = await FormContentModel.findByPk(id as string)
+                if (response) {
+                    res.status(200).json(response)
                     return
                 }
                 res.sendStatus(404)

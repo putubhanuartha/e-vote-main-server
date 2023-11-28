@@ -4,6 +4,7 @@ import cors from 'cors'
 import mail from '@sendgrid/mail';
 import { IndexRoute } from './routes/index.route';
 import sequelize from './config/database';
+import cookieParser from 'cookie-parser'
 
 dotenv.config();
 const sg_api_key = process.env.SENDGRID_API_KEY as string
@@ -11,7 +12,8 @@ const app: Express = express();
 const port = process.env.SERVER_PORT;
 
 async function main() {
-    app.use(cors({ origin: [process.env.ADMIN_CLIENT_URL as string], credentials: true }))
+    app.use(cookieParser())
+    app.use(cors({ origin: [process.env.ADMIN_CLIENT_URL as string, process.env.USER_CLIENT_URL as string], credentials: true }))
     mail.setApiKey(sg_api_key)
     app.use(express.json())
     app.use(express.urlencoded({ extended: false }))

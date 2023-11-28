@@ -26,4 +26,6 @@ Route.delete('/delete-form', AdminController.deleteForm())
 Route.put('/edit-form', AdminController.editForm())
 Route.get('/get-form', AdminController.getForm())
 
+Route.get('/download-form', AdminController.downloadForm())
+
 export { Route as AdminRoute }

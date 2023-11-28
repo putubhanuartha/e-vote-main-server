@@ -18,13 +18,15 @@ const cors_1 = __importDefault(require("cors"));
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 const index_route_1 = require("./routes/index.route");
 const database_1 = __importDefault(require("./config/database"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 dotenv_1.default.config();
 const sg_api_key = process.env.SENDGRID_API_KEY;
 const app = (0, express_1.default)();
 const port = process.env.SERVER_PORT;
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        app.use((0, cors_1.default)({ origin: [process.env.ADMIN_CLIENT_URL], credentials: true }));
+        app.use((0, cookie_parser_1.default)());
+        app.use((0, cors_1.default)({ origin: [process.env.ADMIN_CLIENT_URL, process.env.USER_CLIENT_URL], credentials: true }));
         mail_1.default.setApiKey(sg_api_key);
         app.use(express_1.default.json());
         app.use(express_1.default.urlencoded({ extended: false }));

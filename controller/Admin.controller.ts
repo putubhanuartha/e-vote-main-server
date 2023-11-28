@@ -8,6 +8,8 @@ import tokenGenerator from "../helper/tokenGenerator.helper";
 import emailSender from "../helper/emailSender.helper";
 import VotingService from "../service/Voting.service";
 import { addTimeAndConvertToEpoch } from "../helper/timeConverter";
+import ExcelJs from 'exceljs'
+import fs from 'fs'
 
 
 // sequelize model
@@ -22,16 +24,21 @@ import AdministrativeModel from "../model/Administrative.model";
 import AdministrativeService from "../service/Administrative.service";
 import FormService from "../service/Form.service";
 import FormContentModel from "../model/FormContentModel";
+import FormFilledTransactionModel from "../model/FormFilledTransactionModel";
+import { DynamicFormType } from "../types";
 
 
 class AdminController extends UserController implements FormService, AdministrativeService, AdminService, WargaService, VotingService, CandidateService {
 
-    login(): void {
+    login(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
 
+        }
     }
+    logout(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
 
-    logout(): void {
-
+        }
     }
 
     // administrative
@@ -309,6 +316,55 @@ class AdminController extends UserController implements FormService, Administrat
                 console.error(err)
                 res.sendStatus(500)
             }
+        }
+    }
+    downloadForm(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { id } = req.query
+            const headerData = await FormContentModel.findByPk(id as string)
+            const data = await FormFilledTransactionModel.findAll({ where: { FormContentId: id }, attributes: ["filledContent"] })
+            const parsedHeaderData = JSON.parse(headerData?.dataValues.contentForm) as DynamicFormType[]
+            const parsedData = data.map((el) => JSON.parse(el.dataValues.filledContent))
+
+            console.log(parsedData)
+
+            const workbook = new ExcelJs.Workbook();
+            const worksheet = workbook.addWorksheet('Sheet 1')
+
+            const headers = parsedHeaderData.map((el) => el.title)
+            worksheet.addRow(headers)
+
+            parsedData.forEach((el) => {
+                const row: any[] = [];
+
+                el.forEach((val: any) => {
+                    if (Array.isArray(val)) {
+                        row.push(val.join(', '));
+                    } else {
+                        row.push(val);
+                    }
+                })
+
+                worksheet.addRow(row)
+
+            })
+
+            const tempFilePath = `${headerData?.dataValues.titleForm}.xlsx`;
+            workbook.xlsx.writeFile(tempFilePath)
+                .then(() => {
+                    // Set headers for file download
+                    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+                    res.setHeader('Content-Disposition', `attachment; filename=${headerData?.dataValues.titleForm}.xlsx`);
+                    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+                    // Send the file to the client
+                    fs.createReadStream(tempFilePath).pipe(res);
+                })
+                .catch((error) => {
+                    console.error('Error creating Excel file:', error);
+                    res.status(500).send('Internal Server Error');
+                });
+
         }
     }
 

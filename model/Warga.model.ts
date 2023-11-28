@@ -1,4 +1,4 @@
-import { DataTypes, UUIDV4 } from "sequelize";
+ import { DataTypes, UUIDV4 } from "sequelize";
 import sequelize from "../config/database";
 
 const WargaModel = sequelize.define("Warga", {

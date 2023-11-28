@@ -6,6 +6,7 @@ interface FormService {
     deleteForm(): (req: Request, res: Response) => Promise<void>
     editForm(): (req: Request, res: Response) => Promise<void>
     getForm(): (req: Request, res: Response) => Promise<void>
+    downloadForm(): (req: Request, res: Response) => Promise<void>
 }
 
 export default FormService

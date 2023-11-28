@@ -15,3 +15,10 @@ export enum StatusFormFilling {
     active = "active",
     done = "done"
 }
+
+export enum InputFormType {
+    text = "text",
+    textarea = "textarea",
+    checkbox = "checkbox",
+    radio = "radio"
+}

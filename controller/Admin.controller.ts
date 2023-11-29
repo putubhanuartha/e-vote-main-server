@@ -319,14 +319,19 @@ class AdminController extends UserController implements FormService, Administrat
         return async (req, res) => {
             const { id } = req.query
             const headerData = await FormContentModel.findByPk(id as string)
-            const data = await FormFilledTransactionModel.findAll({ where: { FormContentId: id }, attributes: ["filledContent"] })
+            const data = await FormFilledTransactionModel.findAll({ where: { FormContentId: id }, attributes: ["filledContent"], include: [{ model: WargaModel, attributes: ["nama"] }] })
             const parsedHeaderData = JSON.parse(headerData?.dataValues.contentForm) as DynamicFormType[]
-            const parsedData = data.map((el) => JSON.parse(el.dataValues.filledContent))
+            const parsedData = data.map((el) => {
+                const newArr = JSON.parse(el.dataValues.filledContent)
+                newArr.push((el as any).Warga.dataValues.nama)
+                return newArr
+            })
 
             const workbook = new ExcelJs.Workbook();
             const worksheet = workbook.addWorksheet('Sheet 1')
 
             const headers = parsedHeaderData.map((el) => el.title)
+            headers.push("Nama Warga")
             worksheet.addRow(headers)
 
             parsedData.forEach((el) => {

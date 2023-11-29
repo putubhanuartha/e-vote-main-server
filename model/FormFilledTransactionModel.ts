@@ -10,8 +10,12 @@ const FormFilledTransactionModel = sequelize.define("FormFilledTransaction", {
     }
 }, { freezeTableName: true })
 
-FormContentModel.belongsToMany(WargaModel, { through: FormFilledTransactionModel })
-WargaModel.belongsToMany(FormContentModel, { through: FormFilledTransactionModel })
+WargaModel.hasMany(FormFilledTransactionModel)
+FormFilledTransactionModel.belongsTo(WargaModel)
+
+FormContentModel.hasMany(FormFilledTransactionModel)
+FormFilledTransactionModel.belongsTo(FormContentModel)
+
 
 export default FormFilledTransactionModel
 

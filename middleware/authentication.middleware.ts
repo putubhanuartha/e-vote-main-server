@@ -6,7 +6,7 @@ export const authenticateUser = (req: Request, res: Response, next: NextFunction
     if (!token) return res.sendStatus(401)
     jwt.verify(token, SECRET_TOKEN as string, function (err: any, decoded: any) {
         if (err) {
-            res.sendStatus(403)
+            return res.sendStatus(403)
         }
         res.locals.decoded = decoded
         console.log(decoded)

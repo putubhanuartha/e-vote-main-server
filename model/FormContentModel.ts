@@ -20,7 +20,8 @@ const FormContentModel = sequelize.define("FormContent", {
         type: DataTypes.STRING,
         defaultValue: StatusFormFilling.ready,
         allowNull: false
-    }
+    },
+
 }, { freezeTableName: true })
 
 export default FormContentModel

@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 const Router = express.Router()
 import WargaController from '../controller/Warga.controller'
 import { authenticateUser } from '../middleware/authentication.middleware'
@@ -11,4 +11,8 @@ Router.get('/get-forms', authenticateUser, authorizeWarga, WargaController.getAl
 Router.get('/get-form', authenticateUser, authorizeWarga, WargaController.getForm())
 Router.post('/answer-form', authenticateUser, authorizeWarga, WargaController.postAnswerForm())
 
+
+Router.use('/check-auth', authenticateUser, authorizeWarga, (req: Request, res: Response) => {
+    res.sendStatus(200)
+})
 export { Router as WargaRoute }

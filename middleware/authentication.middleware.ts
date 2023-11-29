@@ -8,8 +8,8 @@ export const authenticateUser = (req: Request, res: Response, next: NextFunction
         if (err) {
             return res.sendStatus(403)
         }
-        res.locals.decoded = decoded
         console.log(decoded)
+        res.locals.decoded = decoded
         next()
     });
 }

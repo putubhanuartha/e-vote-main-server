@@ -8,8 +8,10 @@ import tokenGenerator from "../helper/tokenGenerator.helper";
 import emailSender from "../helper/emailSender.helper";
 import VotingService from "../service/Voting.service";
 import { addTimeAndConvertToEpoch } from "../helper/timeConverter";
+import bcrypt from 'bcrypt'
 import ExcelJs from 'exceljs'
 import fs from 'fs'
+import jwt from 'jsonwebtoken'
 
 
 // sequelize model
@@ -26,18 +28,53 @@ import FormService from "../service/Form.service";
 import FormContentModel from "../model/FormContentModel";
 import FormFilledTransactionModel from "../model/FormFilledTransactionModel";
 import { DynamicFormType } from "../types";
+import AdminModel from "../model/Admin.model";
 
 
 class AdminController extends UserController implements FormService, AdministrativeService, AdminService, WargaService, VotingService, CandidateService {
 
     login(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
-
+            const { password, username } = req.body
+            try {
+                const admin = await AdminModel.findOne({ where: { username } })
+                if (!admin) {
+                    res.sendStatus(404)
+                    return
+                }
+                const encryptPassword = bcrypt.compareSync(password, await admin.getDataValue("password"))
+                if (!encryptPassword) {
+                    res.sendStatus(401)
+                    return
+                }
+                const token = jwt.sign({ username: await admin.getDataValue("username"), id: await admin.getDataValue("id") }, process.env.JWT_TOKEN as string, { expiresIn: '24h' })
+                res.cookie("token", token, { httpOnly: true, secure: true, maxAge: 1000 * 60 * 60 * 24 })
+                res.status(200).json(token)
+            }
+            catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
         }
     }
     logout(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
 
+        }
+    }
+
+    register(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { username, password } = req.body
+            try {
+                const salt = bcrypt.genSaltSync(10)
+                const cryptedPass = bcrypt.hashSync(password, salt)
+                const admin = await AdminModel.create({ username, password: cryptedPass })
+                res.status(200).json(admin)
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
         }
     }
 
@@ -50,6 +87,19 @@ class AdminController extends UserController implements FormService, Administrat
                 return
             }
             res.status(200).json(administrativeData)
+        }
+    }
+
+    createAdministrativeData(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { kecamatan, kelurahan, rw, rt, jenisPilihan } = req.body
+            try {
+                const wilayah = await AdministrativeModel.create({ kecamatan, kelurahan, rw, ...(rt && { rt }), jenisPilihan })
+                res.status(200).json(wilayah)
+            } catch (err) {
+                console.error(err);
+                res.sendStatus(500)
+            }
         }
     }
 

@@ -1,31 +1,42 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 import AdminController from '../controller/Admin.controller'
+import { authenticateUser } from '../middleware/authentication.middleware'
+import { authorizeAdmin } from '../middleware/authorization.middleware'
 const Route = express.Router()
 
-Route.get("/get-administrative", AdminController.getAdministrativeData())
 
-Route.post("/add-warga", AdminController.addWarga())
-Route.get("/show-warga", AdminController.showWarga())
-Route.delete("/delete-warga", AdminController.deleteWarga())
-Route.put("/update-warga", AdminController.editWarga())
+Route.post('/signup', AdminController.register())
+Route.post('/login', AdminController.login())
 
+Route.get("/get-administrative", authenticateUser, authorizeAdmin, AdminController.getAdministrativeData())
+Route.post('/create-administrative', authenticateUser, authorizeAdmin, AdminController.createAdministrativeData())
 
-Route.post("/add-voting", AdminController.addVoting())
-Route.get("/available-voting", AdminController.getAvailableVoting())
-Route.put("/update-voting", AdminController.editVoting())
-
-Route.post('/add-candidate', AdminController.addCandidate())
-Route.get("/get-active-candidates", AdminController.getActiveCandidate())
-Route.delete('/delete-candidate', AdminController.deleteCandidate())
+Route.post("/add-warga", authenticateUser, authorizeAdmin, AdminController.addWarga())
+Route.get("/show-warga", authenticateUser, authorizeAdmin, AdminController.showWarga())
+Route.delete("/delete-warga", authenticateUser, authorizeAdmin, AdminController.deleteWarga())
+Route.put("/update-warga", authenticateUser, authorizeAdmin, AdminController.editWarga())
 
 
-Route.post('/add-form', AdminController.addNewForm())
-Route.get('/get-forms', AdminController.getForms())
-Route.put('/edit-status-form', AdminController.editStatusForm())
-Route.delete('/delete-form', AdminController.deleteForm())
-Route.put('/edit-form', AdminController.editForm())
-Route.get('/get-form', AdminController.getForm())
+Route.post("/add-voting", authenticateUser, authorizeAdmin, AdminController.addVoting())
+Route.get("/available-voting", authenticateUser, authorizeAdmin, AdminController.getAvailableVoting())
+Route.put("/update-voting", authenticateUser, authorizeAdmin, AdminController.editVoting())
 
-Route.get('/download-form', AdminController.downloadForm())
+Route.post('/add-candidate', authenticateUser, authorizeAdmin, AdminController.addCandidate())
+Route.get("/get-active-candidates", authenticateUser, authorizeAdmin, AdminController.getActiveCandidate())
+Route.delete('/delete-candidate', authenticateUser, authorizeAdmin, AdminController.deleteCandidate())
+
+
+Route.post('/add-form', authenticateUser, authorizeAdmin, AdminController.addNewForm())
+Route.get('/get-forms', authenticateUser, authorizeAdmin, AdminController.getForms())
+Route.put('/edit-status-form', authenticateUser, authorizeAdmin, AdminController.editStatusForm())
+Route.delete('/delete-form', authenticateUser, authorizeAdmin, AdminController.deleteForm())
+Route.put('/edit-form', authenticateUser, authorizeAdmin, AdminController.editForm())
+Route.get('/get-form', authenticateUser, authorizeAdmin, AdminController.getForm())
+
+Route.get('/download-form', authenticateUser, authorizeAdmin, AdminController.downloadForm())
+
+Route.use('/check-auth', authenticateUser, authorizeAdmin, (req: Request, res: Response) => {
+    res.sendStatus(200)
+})
 
 export { Route as AdminRoute }

@@ -5,7 +5,7 @@ import AdminModel from "../model/Admin.model";
 export const authorizeWarga = async (req: Request, res: Response, next: NextFunction) => {
     let id;
     id = res.locals.decoded?.id
-    if(!id) return res.sendStatus(403)
+    if (!id) return res.sendStatus(403)
     try {
         const warga = await WargaModel.findByPk(id)
         if (!warga) return res.sendStatus(401)
@@ -18,9 +18,11 @@ export const authorizeWarga = async (req: Request, res: Response, next: NextFunc
 export const authorizeAdmin = async (req: Request, res: Response, next: NextFunction) => {
     let id;
     id = res.locals.decoded?.id
-    if(!id) return res.sendStatus(403)
+    if (!id) return res.sendStatus(403)
     try {
+
         const admin = await AdminModel.findByPk(id)
+        console.log(admin)
         if (!admin) return res.sendStatus(401)
     } catch (err) {
         return res.sendStatus(500)

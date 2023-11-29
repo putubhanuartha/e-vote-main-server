@@ -144,7 +144,7 @@ class AdminController extends UserController implements FormService, Administrat
         return async (req, res) => {
             const { id } = req.query
             const { date, timeStart, timeEnd, jenisPilihan, kelurahan, kecamatan, rt, rw } = req.body
-            console.log(rt)
+
             try {
                 const [updatedResponse] = await VotingModel.update({ kecamatan: kecamatan, kelurahan: kelurahan, rw: Number(rw), epochtimeEnd: addTimeAndConvertToEpoch(date, timeEnd), epochtimeStart: addTimeAndConvertToEpoch(date, timeStart), jenisPilihan: jenisPilihan, rt: Number(rt) }, { where: { id } })
                 if (updatedResponse === 0) {
@@ -210,7 +210,6 @@ class AdminController extends UserController implements FormService, Administrat
     deleteCandidate(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
             const { id, votingId } = req.query
-            console.log(id)
             try {
                 const deleted = await CandidateModel.destroy({ where: { id } })
                 const rows = await CandidateModel.count()
@@ -258,8 +257,6 @@ class AdminController extends UserController implements FormService, Administrat
         return async (req, res) => {
             const { id } = req.query
             const { status } = req.body
-            console.log(id)
-            console.log(status)
             try {
                 const [updated] = await FormContentModel.update({ status }, { where: { id } })
                 if (updated > 0) {
@@ -326,8 +323,6 @@ class AdminController extends UserController implements FormService, Administrat
             const parsedHeaderData = JSON.parse(headerData?.dataValues.contentForm) as DynamicFormType[]
             const parsedData = data.map((el) => JSON.parse(el.dataValues.filledContent))
 
-            console.log(parsedData)
-
             const workbook = new ExcelJs.Workbook();
             const worksheet = workbook.addWorksheet('Sheet 1')
 
@@ -358,7 +353,16 @@ class AdminController extends UserController implements FormService, Administrat
                     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
                     // Send the file to the client
-                    fs.createReadStream(tempFilePath).pipe(res);
+                    const fileStream = fs.createReadStream(tempFilePath).pipe(res);
+                    fileStream.on('close', () => {
+                        fs.unlink(tempFilePath, (err) => {
+                            if (err) {
+                                console.error('Error deleting file:', err);
+                            } else {
+                                console.log('File deleted successfully.');
+                            }
+                        });
+                    });
                 })
                 .catch((error) => {
                     console.error('Error creating Excel file:', error);

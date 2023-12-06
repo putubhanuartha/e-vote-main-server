@@ -29,6 +29,7 @@ import FormContentModel from "../model/FormContentModel";
 import FormFilledTransactionModel from "../model/FormFilledTransactionModel";
 import { DynamicFormType } from "../types";
 import AdminModel from "../model/Admin.model";
+import CandidateVotedTransactionModel from "../model/CandidateVotedTransaction.model";
 
 
 class AdminController extends UserController implements FormService, AdministrativeService, AdminService, WargaService, VotingService, CandidateService {
@@ -247,7 +248,8 @@ class AdminController extends UserController implements FormService, Administrat
             try {
                 const candidate = await CandidateModel.create({ visi, misi, photoUrl: imageUrl, WargaId: kandidat })
                 const response = await VotingCandidatesModel.create({ fk_votingId: votingId, fk_candidateId: candidate.dataValues.id })
-                await VotingModel.update({ status: StatusVoting.ready }, { where: { id: votingId } })
+                const rows = await CandidateModel.count()
+                await VotingModel.update({ status: rows > 1 ? StatusVoting.ready : StatusVoting.not_ready }, { where: { id: votingId } })
                 res.status(200).json({ ...candidate.dataValues, ...response.dataValues })
             }
             catch (err) {
@@ -263,7 +265,7 @@ class AdminController extends UserController implements FormService, Administrat
             try {
                 const deleted = await CandidateModel.destroy({ where: { id } })
                 const rows = await CandidateModel.count()
-                if (rows === 0) await VotingModel.update({ status: StatusVoting.not_ready }, { where: { id: votingId } })
+                if (rows <= 1) await VotingModel.update({ status: StatusVoting.not_ready }, { where: { id: votingId } })
                 if (deleted > 0) {
                     res.sendStatus(200)
                     return
@@ -424,6 +426,41 @@ class AdminController extends UserController implements FormService, Administrat
                     res.status(500).send('Internal Server Error');
                 });
 
+        }
+    }
+
+    getPemilihan(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { votingId } = req.query
+            try {
+
+                const candidate = await VotingCandidatesModel.findAll({ where: { fk_votingId: votingId }, include: [{ model: VotingModel }], attributes: ["fk_candidateId"] })
+                const candidateMapped = candidate.map((el) => el.dataValues.fk_candidateId)
+                console.log(candidateMapped)
+                const value = await Promise.all(candidateMapped.map(async (el) => {
+                    const data = await CandidateVotedTransactionModel.count({ include: [{ model: VotingCandidatesModel, where: { fk_candidateId: el, fk_votingId: votingId } }] })
+                    const name = await CandidateModel.findOne({ include: [{ model: WargaModel, attributes: ["nama"] }], where: { id: el } })
+                    return { label: (name as any).Warga.nama, value: data }
+                }))
+
+                res.status(200).json(value)
+            } catch (err) {
+                console.error(err);
+                res.sendStatus(500)
+            }
+        }
+    }
+
+    getPemilihanDone(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            try {
+                const data = await VotingModel.findAll({ where: { status: StatusVoting.done } })
+                res.status(200).json(data)
+            }
+            catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
         }
     }
 

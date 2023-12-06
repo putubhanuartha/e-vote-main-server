@@ -9,8 +9,13 @@ import dotenv from 'dotenv'
 import jwt from 'jsonwebtoken'
 import FormFilledTransactionModel from "../model/FormFilledTransactionModel";
 import FormContentModel from "../model/FormContentModel";
-import { StatusFormFilling } from "../enums";
+import { StatusFormFilling, StatusVoting } from "../enums";
 import { Op } from "sequelize";
+import VotingCandidatesModel from "../model/VotingCandidates.model";
+import VotingModel from "../model/Voting.model";
+import CandidateModel from "../model/Candidate.model";
+import AdministrativeModel from "../model/Administrative.model";
+import CandidateVotedTransactionModel from "../model/CandidateVotedTransaction.model";
 dotenv.config()
 
 const SECRET_TOKEN = process.env.JWT_TOKEN;
@@ -62,11 +67,14 @@ class WargaController extends UserController {
         }
     }
 
+    // form
     getAllForms(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
         return async (req, res) => {
             const { id } = res.locals.decoded
             try {
-                const votings: any = []
+                const votingTransaction = await CandidateVotedTransactionModel.findAll({ where: { WargaId: id }, include: [{ model: VotingCandidatesModel, attributes: ["fk_votingId"] }] })
+                const listIdVoting = votingTransaction.map((el) => el.dataValues.VotingCandidate.dataValues.fk_votingId)
+                const votings = await VotingModel.findAll({ where: { status: StatusVoting.active, id: { [Op.notIn]: listIdVoting } }, include: [{ model: AdministrativeModel }] })
                 const listId = await FormFilledTransactionModel.findAll({ where: { WargaId: id }, attributes: ["FormContentId"] })
                 const idsForm = listId.map((el) => el.getDataValue("FormContentId"))
                 const data = await FormContentModel.findAll({ where: { status: StatusFormFilling.active, id: { [Op.notIn]: idsForm } } })
@@ -105,7 +113,59 @@ class WargaController extends UserController {
         }
     }
 
+    // getCandidates
+    getCandidates(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { id: votingId } = req.query
+            console.log(votingId)
+            try {
+                const candidates = await VotingCandidatesModel.findAll({ where: { fk_votingId: votingId }, include: [{ model: CandidateModel, include: [{ model: WargaModel }] }, { model: VotingModel, include: [{ model: AdministrativeModel, attributes: ["kecamatan", "kelurahan", "rw", "rt", "jenisPilihan"] }] }] })
+                res.status(200).json(candidates)
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
 
+        }
+    }
+
+    // choose candidates
+    chooseCandidates(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            const { id } = res.locals.decoded
+            const { votingCandidateId } = req.query
+
+            try {
+                await CandidateVotedTransactionModel.create({ WargaId: id, VotingCandidateId: votingCandidateId })
+                res.sendStatus(200)
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+        }
+    }
+
+
+    getActiveVoting(): (req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>, res: Response<any, Record<string, any>>) => Promise<void> {
+        return async (req, res) => {
+            try {
+                const candidate = await VotingCandidatesModel.findAll({ include: [{ model: VotingModel, where: { status: StatusVoting.active } }], attributes: ["fk_candidateId"] })
+                const candidateMapped = candidate.map((el) => el.dataValues.fk_candidateId)
+                console.log(candidateMapped)
+                const value = await Promise.all(candidateMapped.map(async (el) => {
+                    const data = await CandidateVotedTransactionModel.count({ include: [{ model: VotingCandidatesModel, where: { fk_candidateId: el }, include: [{ model: VotingModel, where: { status: StatusVoting.active } }] }] })
+                    const name = await CandidateModel.findOne({ include: [{ model: WargaModel, attributes: ["nama"] }], where: { id: el } })
+                    return { label: (name as any).Warga.nama, value: data }
+                }))
+
+                res.status(200).json(value)
+
+            } catch (err) {
+                console.error(err)
+                res.sendStatus(500)
+            }
+        }
+    }
 }
 
 export default new WargaController()

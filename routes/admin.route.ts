@@ -39,4 +39,7 @@ Route.use('/check-auth', authenticateUser, authorizeAdmin, (req: Request, res: R
     res.sendStatus(200)
 })
 
+Route.get('/stats-pemilihan', authenticateUser, authorizeAdmin, AdminController.getPemilihan())
+Route.get('/get-all-pemilihan', authenticateUser, authorizeAdmin, AdminController.getPemilihanDone())
+
 export { Route as AdminRoute }

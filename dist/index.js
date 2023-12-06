@@ -19,6 +19,7 @@ const mail_1 = __importDefault(require("@sendgrid/mail"));
 const index_route_1 = require("./routes/index.route");
 const database_1 = __importDefault(require("./config/database"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const cron_job_1 = __importDefault(require("./cron-job"));
 dotenv_1.default.config();
 const sg_api_key = process.env.SENDGRID_API_KEY;
 const app = (0, express_1.default)();
@@ -31,6 +32,7 @@ function main() {
         app.use(express_1.default.json());
         app.use(express_1.default.urlencoded({ extended: false }));
         app.use(index_route_1.IndexRoute);
+        (0, cron_job_1.default)();
         try {
             yield database_1.default.authenticate();
             console.log("database is authenticated ...");
